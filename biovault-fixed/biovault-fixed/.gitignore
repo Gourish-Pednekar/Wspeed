@@ -1,0 +1,12 @@
+node_modules/
+.env
+dist/
+build/
+*.local
+circuits/build/
+circuits/keys/*.zkey
+contracts/artifacts/
+contracts/cache/
+contracts/deployments.json
+backend/.env.contracts
+.DS_Store
