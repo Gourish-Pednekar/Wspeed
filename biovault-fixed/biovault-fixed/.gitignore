@@ -10,3 +10,4 @@ contracts/cache/
 contracts/deployments.json
 backend/.env.contracts
 .DS_Store
+voice-service/venv
