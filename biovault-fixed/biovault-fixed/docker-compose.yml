@@ -29,8 +29,8 @@ services:
       - JWT_SECRET=dev_secret_change_in_production
       - JWT_EXPIRES_IN=7d
       - WEBAUTHN_RP_NAME=BioVault
-      - WEBAUTHN_RP_ID=supereminent-lithographically-deloris.ngrok-free.dev
-      - WEBAUTHN_ORIGIN=https://supereminent-lithographically-deloris.ngrok-free.dev
+      - WEBAUTHN_RP_ID=ovine-prandially-marlee.ngrok-free.dev
+      - WEBAUTHN_ORIGIN=https://ovine-prandially-marlee.ngrok-free.dev
       - NETWORK_RPC_URL=
     env_file:
       - ./backend/.env
@@ -51,6 +51,16 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  voice-service:
+    build:
+      context: ./voice-service
+    container_name: biovault-voice
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    depends_on:
+      - backend
 
 volumes:
   mongo_data:

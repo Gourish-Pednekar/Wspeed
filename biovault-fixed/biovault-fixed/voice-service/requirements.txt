@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+torch
+torchaudio
+speechbrain
+openai-whisper
+python-multipart
+librosa

@@ -4,6 +4,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const bundlerService = require("../services/bundlerService");
 const webauthnService = require("../services/webauthnService");
 const User = require("../models/User");
+const VoiceProfile = require("../models/VoiceProfile"); 
 const { ethers } = require("ethers");
 
 // POST /api/transaction/prepare
@@ -42,14 +43,18 @@ router.post("/prepare", authMiddleware, async (req, res, next) => {
 // Receives biometric-signed UserOp and submits to bundler
 router.post("/send", authMiddleware, async (req, res, next) => {
   try {
-    const { userId, userOp, biometricCredential } = req.body;
+    // ✅ UPDATED: added voiceAuthId
+    const { userId, userOp, biometricCredential, voiceAuthId } = req.body;
+
     const user = await User.findById(userId || req.user.userId);
 
-    // Verify biometric signature
+    // --- EXISTING WEBAUTHN LOGIC ---
     const matchedCred = user.credentials.find(
       (c) => c.credentialId === biometricCredential.id
     );
-    if (!matchedCred) return res.status(400).json({ error: "Credential not found" });
+    if (!matchedCred) {
+      return res.status(400).json({ error: "Credential not found" });
+    }
 
     const authResult = await webauthnService.verifyAuthResponse(
       user._id.toString(),
@@ -61,7 +66,26 @@ router.post("/send", authMiddleware, async (req, res, next) => {
     matchedCred.counter = authResult.newCounter;
     await user.save();
 
-    // Attach WebAuthn signature to UserOp
+    // --- ✅ NEW VOICE STEP-UP CHECK ---
+    const vProfile = await VoiceProfile.findOne({ userId: user._id });
+
+    if (!vProfile || !vProfile.lastVerified) {
+      return res.status(401).json({
+        error: "Voice step-up authentication required",
+      });
+    }
+
+    const timeSinceVerification =
+      Date.now() - new Date(vProfile.lastVerified).getTime();
+
+    if (timeSinceVerification > 2 * 60 * 1000) {
+      // 2 minutes
+      return res.status(401).json({
+        error: "Voice verification expired. Please re-verify.",
+      });
+    }
+
+    // --- EXISTING SIGNATURE LOGIC ---
     const signedUserOp = {
       ...userOp,
       signature: ethers.AbiCoder.defaultAbiCoder().encode(
@@ -69,8 +93,8 @@ router.post("/send", authMiddleware, async (req, res, next) => {
         [
           authResult.authenticatorData,
           authResult.clientDataJSON,
-          "0x1234", // r component (from P256 sig)
-          "0x5678", // s component (from P256 sig)
+          "0x1234", // TODO: replace with actual r
+          "0x5678", // TODO: replace with actual s
         ]
       ),
     };
@@ -88,4 +112,4 @@ router.post("/send", authMiddleware, async (req, res, next) => {
   }
 });
 
-module.exports = router;
+// module.exports = router;
